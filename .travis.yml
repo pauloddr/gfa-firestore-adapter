@@ -1,0 +1,18 @@
+before_install:
+- npm install -g firebase-tools
+- firebase init firestore
+- firebase --open-sesame emulators
+- firebase setup:emulators:firestore
+
+before_script:
+- firebase serve --only firestore &
+
+language: node_js
+node_js:
+  - "8"
+
+jobs:
+  include:
+    - stage: test
+      node_js: "8"
+      script: npm test && npm run coverage
