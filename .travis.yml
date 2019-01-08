@@ -3,7 +3,7 @@ before_install:
 
 before_script:
 - firebase setup:emulators:firestore
-- firebase serve --only firestore &
+- firebase serve --only firestore
 
 language: node_js
 node_js:
