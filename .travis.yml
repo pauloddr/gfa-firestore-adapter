@@ -1,8 +1,8 @@
 before_install:
 - npm install -g firebase-tools
-- firebase setup:emulators:firestore
 
 before_script:
+- firebase setup:emulators:firestore
 - firebase serve --only firestore &
 
 language: node_js
