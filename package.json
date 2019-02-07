@@ -22,7 +22,7 @@
     "@google-cloud/firestore": "0.19.0"
   },
   "devDependencies": {
-    "@firebase/testing": "0.7.0",
+    "@firebase/testing": "0.7.1",
     "chai": "4.2.0",
     "coveralls": "3.0.2",
     "dirty-chai": "2.0.1",
