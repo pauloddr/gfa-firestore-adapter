@@ -3,9 +3,7 @@
 const { DatabaseAdapter } = require('@gfa/core/adapters/DatabaseAdapter')
 const createFirestoreInstance = require('../config/firestore')
 
-// const { FieldPath } = require('@google-cloud/firestore')
-
-// const INVALID_METHOD = new Error('INVALID_METHOD')
+var cachedQueries = new Map()
 
 class FirestoreAdapter extends DatabaseAdapter {
   constructor (opts) {
@@ -20,6 +18,16 @@ class FirestoreAdapter extends DatabaseAdapter {
   }
 
   query (req, res, kind, conditions, callback) {
+    let cacheKey = JSON.stringify([kind, conditions])
+    var cache = cachedQueries.get(cacheKey)
+    if (cache) {
+      console.log('[FirestoreAdapter]', 'Sending cached results for', cacheKey)
+      this.queryResult(req, res, cache.snapshot, callback)
+      return
+    }
+    console.log('[FirestoreAdapter]', 'Creating new query', cacheKey)
+    cache = { callback }
+    cachedQueries.set(cacheKey, cache)
     var query = this.firestore.collection(kind)
     var operator, field, value
     if (conditions) {
@@ -40,15 +48,28 @@ class FirestoreAdapter extends DatabaseAdapter {
         query = query.where(field, operator, value)
       }
     }
-    query.get().then(querySnapshot => {
-      var results = []
-      querySnapshot.forEach(documentSnapshot => {
-        var data = documentSnapshot.data()
-        data.id = documentSnapshot.id
-        results.push(data)
-      })
-      callback(null, req, res, results)
+    var unsubscribe = query.onSnapshot(snapshot => {
+      console.log('[FirestoreAdapter]', 'Snapshot generated for', cacheKey)
+      var cache = cachedQueries.get(cacheKey)
+      cache.unsubscribe = unsubscribe
+      cache.snapshot = snapshot
+      if (cache.callback) {
+        console.log('[FirestoreAdapter]', 'Sending query results for the first time for', cacheKey)
+        this.queryResult(req, res, snapshot, cache.callback)
+        cache.callback = null
+      }
     })
+  }
+
+  queryResult (req, res, snapshot, callback) {
+    var results = []
+    snapshot.forEach(documentSnapshot => {
+      results.push({
+        id: documentSnapshot.id,
+        ...documentSnapshot.data()
+      })
+    })
+    callback(null, req, res, results)
   }
 
   insert (req, res, kind, data, callback) {
