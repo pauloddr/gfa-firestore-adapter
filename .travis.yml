@@ -3,7 +3,7 @@ before_install:
 
 before_script:
 - firebase setup:emulators:firestore
-- firebase serve --only firestore
+- firebase serve --host 127.0.0.1 --only firestore
 
 language: node_js
 node_js:
@@ -13,4 +13,4 @@ jobs:
   include:
     - stage: test
       node_js: "8"
-      script: npm test && npm run coverage
+      script: FIRESTORE_EMULATOR_HOST=[::1]:8080,127.0.0.1:8080 npm test && npm run coverage

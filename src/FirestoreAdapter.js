@@ -64,9 +64,16 @@ class FirestoreAdapter extends DatabaseAdapter {
   queryResult (req, res, snapshot, callback) {
     var results = []
     snapshot.forEach(documentSnapshot => {
+      var data = documentSnapshot.data()
+      for (var field in data) {
+        // Look for Timestamps and convert them to Dates
+        if (data[field].constructor.name === 'Timestamp') {
+          data[field] = data[field].toDate()
+        }
+      }
       results.push({
         id: documentSnapshot.id,
-        ...documentSnapshot.data()
+        ...data
       })
     })
     callback(null, req, res, results)
