@@ -3,8 +3,6 @@
 const { DatabaseAdapter } = require('@gfa/core/adapters/DatabaseAdapter')
 const createFirestoreInstance = require('../config/firestore')
 
-var cachedQueries = new Map()
-
 class FirestoreAdapter extends DatabaseAdapter {
   constructor (opts) {
     super(opts)
@@ -14,12 +12,15 @@ class FirestoreAdapter extends DatabaseAdapter {
     if (options.projectId) {
       firestoreOpts.projectId = options.projectId
     }
+    console.log('[FirestoreAdapter]', 'Initializing query cache')
+    this.cachedQueries = new Map()
     this.firestore = createFirestoreInstance(firestoreOpts)
   }
 
   query (req, res, kind, conditions, callback) {
+    var cachedQueries = this.cachedQueries
     let cacheKey = JSON.stringify([kind, conditions])
-    var cache = cachedQueries.get(cacheKey)
+    var cache = this.cachedQueries.get(cacheKey)
     if (cache) {
       console.log('[FirestoreAdapter]', 'Sending cached results for', cacheKey)
       this.queryResult(req, res, cache.snapshot, callback)
@@ -48,17 +49,24 @@ class FirestoreAdapter extends DatabaseAdapter {
         query = query.where(field, operator, value)
       }
     }
-    var unsubscribe = query.onSnapshot(snapshot => {
-      console.log('[FirestoreAdapter]', 'Snapshot generated for', cacheKey)
-      var cache = cachedQueries.get(cacheKey)
-      cache.unsubscribe = unsubscribe
-      cache.snapshot = snapshot
-      if (cache.callback) {
-        console.log('[FirestoreAdapter]', 'Sending query results for the first time for', cacheKey)
-        this.queryResult(req, res, snapshot, cache.callback)
-        cache.callback = null
+    var unsubscribe = query.onSnapshot(
+      snapshot => {
+        console.log('[FirestoreAdapter]', 'Snapshot generated for', cacheKey)
+        var cache = cachedQueries.get(cacheKey)
+        cache.unsubscribe = unsubscribe
+        cache.snapshot = snapshot
+        if (cache.callback) {
+          console.log('[FirestoreAdapter]', 'Sending query results for the first time for', cacheKey)
+          this.queryResult(req, res, snapshot, cache.callback)
+          cache.callback = null
+        }
+      },
+      error => {
+        console.log('[FirestoreAdapter]', 'Error on snapshot listener for', cacheKey)
+        console.log(error)
+        cachedQueries.delete(cacheKey)
       }
-    })
+    )
   }
 
   queryResult (req, res, snapshot, callback) {
