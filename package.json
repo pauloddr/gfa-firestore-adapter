@@ -19,7 +19,7 @@
   "homepage": "https://github.com/pauloddr/gfa-firestore-adapter#readme",
   "dependencies": {
     "@gfa/core": "github:pauloddr/gfa-core",
-    "@google-cloud/firestore": "1.0.1"
+    "@google-cloud/firestore": "1.2.0"
   },
   "devDependencies": {
     "@firebase/testing": "0.7.2",
